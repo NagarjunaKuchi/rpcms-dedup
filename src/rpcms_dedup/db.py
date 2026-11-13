@@ -20,7 +20,7 @@ def make_engine(database_url: str) -> Engine:
 
 
 def init_schema(engine: Engine) -> None:
-    """Create tables. Fine for development; use migrations (e.g. Alembic) in production."""
+    """Create tables. Development and tests only; production uses Alembic migrations."""
     Base.metadata.create_all(engine)
 
 

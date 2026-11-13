@@ -40,7 +40,8 @@ def _existing(ev: AssistanceEvent | None) -> ExistingAssistance | None:
 def create_app(settings: Settings | None = None, engine: Engine | None = None) -> FastAPI:
     settings = settings or Settings()
     engine = engine or make_engine(settings.database_url)
-    init_schema(engine)
+    if settings.create_tables:
+        init_schema(engine)  # dev/tests only; production uses Alembic (see README)
     session_factory = make_session_factory(engine)
 
     app = FastAPI(title="RPCMS Duplicate Guard", version=__version__)

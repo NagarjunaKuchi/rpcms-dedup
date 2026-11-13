@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     # SQLAlchemy URL. Use PostgreSQL (postgresql+psycopg://...) outside development.
     database_url: str = "sqlite:///./rpcms_dedup.db"
 
+    # True (default, dev/tests): create tables at startup. Set False in production and run `alembic upgrade head`.
+    create_tables: bool = True
+
     # Secret for the keyed hash that turns a ProGres ID into the duplicate token.
     # Raw ProGres IDs are never stored. Losing or rotating this key breaks matching
     # against existing records, so manage it like any other long-lived secret.

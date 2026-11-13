@@ -1,3 +1,4 @@
+import os
 import pytest
 from fastapi.testclient import TestClient
 
@@ -11,7 +12,8 @@ API_KEY = "test-api-key-123456"
 
 @pytest.fixture()
 def settings(tmp_path):
-    return Settings(database_url=f"sqlite:///{tmp_path}/t.db", hmac_key=HMAC_KEY, api_key=API_KEY)
+    url = os.environ.get("RPCMS_TEST_DATABASE_URL", f"sqlite:///{tmp_path}/t.db")
+    return Settings(database_url=url, hmac_key=HMAC_KEY, api_key=API_KEY, create_tables="RPCMS_TEST_DATABASE_URL" not in os.environ)
 
 
 @pytest.fixture()
@@ -30,3 +32,15 @@ def session(engine):
 @pytest.fixture()
 def client(settings, engine):
     return TestClient(create_app(settings, engine), headers={"X-API-Key": API_KEY})
+
+
+@pytest.fixture(autouse=True)
+def _clean_external_db():
+    """With RPCMS_TEST_DATABASE_URL set (a throwaway Postgres already migrated with `alembic upgrade head`),
+    empty the tables between tests. The default per-test SQLite file needs nothing."""
+    url = os.environ.get("RPCMS_TEST_DATABASE_URL")
+    if url:
+        from sqlalchemy import create_engine, text
+        with create_engine(url).begin() as c:
+            c.execute(text("TRUNCATE assistance_event, referral RESTART IDENTITY CASCADE"))
+    yield

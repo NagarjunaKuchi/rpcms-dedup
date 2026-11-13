@@ -40,18 +40,27 @@ uvicorn rpcms_dedup.api:app_factory --factory --port 8000
 pytest
 ```
 
+## Database migrations
+```
+pip install -e ".[postgres]"
+export RPCMS_DEDUP_DATABASE_URL=postgresql+psycopg://user:pass@host/db  RPCMS_DEDUP_CREATE_TABLES=false
+alembic upgrade head
+```
+`RPCMS_DEDUP_CREATE_TABLES` defaults to `true` (tables auto-created at startup, for development and tests). A test checks that the migrations produce exactly the model schema. To run the suite against a migrated Postgres: `RPCMS_TEST_DATABASE_URL=... pytest` (it truncates the tables between tests, so use a throwaway database).
+
 ## Known limits (read before production)
 
 - **Key management.** The token is only as stable as `RPCMS_DEDUP_HMAC_KEY`. Rotating it
   orphans existing records; plan a re-keying procedure before you need one.
-- **Schema.** Tables are created at start-up for development. Production needs migrations
-  (for example Alembic), which are not included yet.
+- **Schema.** Alembic migrations exist for the current schema only (one initial revision). Set
+  `RPCMS_DEDUP_CREATE_TABLES=false` and run `alembic upgrade head` in production (see below).
 - **Offline gap.** A handover made offline can only be detected after sync (it is stored as
   `CONFLICT`). It is not prevented.
 - **Authentication** is a single shared API key. Replace with mTLS or OAuth2 client
   credentials before exposing beyond a private network.
-- Tested against SQLite only, including an 8-thread race. The same unique constraint
-  should behave the same on PostgreSQL, but that is not yet verified.
+- Concurrency: the two concurrent tests (8-thread race for one slot, concurrent retry of one key)
+  pass on SQLite and, in a local run, on PostgreSQL 16 (15 repeated runs). That is a small test on one
+  machine, not a load test, and other Postgres versions are unverified.
 - No licence file is included; add the one you intend to use.
 
 Design context: see the RPCMS Technical and Architecture Specification (sections 1.3, 4b, 4c).
